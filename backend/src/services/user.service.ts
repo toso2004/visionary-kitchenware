@@ -92,14 +92,13 @@ export const updateUser = async ({
     //If the user exists update the user
     const SqlQuery = `UPDATE "users" 
     SET
-        role_id = $2
-        name = $3,
-        email = $4,
-        password = $5,
-        dob = $6,
-        address = $7,
-        is_active = $8,
-        is_verified = $9,
+        name = $2,
+        email = $3,
+        password = $4,
+        dob = $5,
+        address = $6,
+        is_active = $7,
+        is_verified = $8,
         updated_at = NOW()
     WHERE id = $1
     RETURNING id
@@ -107,7 +106,6 @@ export const updateUser = async ({
 
     const params = [
         user.id,
-        user.role_id,
         user.name,
         user.email,
         hashedPassword,
@@ -122,17 +120,13 @@ export const updateUser = async ({
 
     //If user doesn't exist or there is some sort of issue with their account and rowCount for that user in the db is 0
     // insert the user instead of returning an error message indicating that the user doesn't exist
-    /*if(updatedUser.rowCount === 0){
+    if(updatedUser.length === 0){
         const insertQuery = `INSERT INTO 
         "users"(id, role_id, name, email, password, dob, address, is_active, is_verified, updated_at)
         VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
         RETURNING id`;
 
-        updatedUser = await client.query(insertQuery, params);
-    }*/
-
-    if(!updatedUser || updatedUser.length === 0){
-        throw new Error('User not found or update failed')
+        updatedUser = await DBUtil.query(insertQuery, params);
     }
 
     return updatedUser[0];
@@ -144,11 +138,7 @@ export const updateUser = async ({
  * @param param0 
  * @returns 
  */
-export const deleteUser = async ({
-    user
-}:{
-    user: userInterface.User
-})=> {
+export const deleteUserById = async (user_id: Number )=> {
     
     try{
         const deleteQuery = `UPDATE "user" 
@@ -156,7 +146,7 @@ export const deleteUser = async ({
         WHERE id = $1 AND is_active = True
         RETURNING id`;
 
-        const params = [user.id];
+        const params = [user_id];
 
         const result = await DBUtil.query(deleteQuery, params);
 
@@ -165,7 +155,7 @@ export const deleteUser = async ({
         }
 
         return {
-            user: user.id,
+            user_id: user_id,
             message: 'User deleted successfully'
         }
     }catch(error){
