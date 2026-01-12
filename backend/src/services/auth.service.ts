@@ -4,7 +4,6 @@ import crypto from 'crypto'
 import * as TokenUtil from "../utils/token.util";
 import * as userInterface from '../models/interface/user.interface'
 import { getErrorMessage } from "../utils/error.util";
-import { TokenTableName } from "../models/enums/auth.enum";
 import { TokenTable } from "../models/interface/auth.interface";
 import { sendForgotPasswordEmail } from "../utils/email.util";
 
@@ -48,30 +47,20 @@ export const storeRefreshToken = async ({
     user: userInterface.User,
     client: PoolClient
 }) => {
-
-    try{
-        client = await DBUtil.startTransaction();
-        
-        const accessToken = await TokenUtil.generateAccessToken({
-            userId: user.id,
-            client: client
-        });
-        const refreshToken = TokenUtil.generateRefreshToken();
-        const expires_date = new Date(Date.now() * 7 * 24 * 60 * 1000);
-
-        await DBUtil.query(
-            `INSERT INTO auth_token(user_id, token, is_active, expire_at)
-            VALUES($1, $2, $3, $4) RETURNING *`,
-        [user.id, refreshToken, true, expires_date], client);
-        
-        await DBUtil.commitTransaction(client);
-        return {accessToken, refreshToken};
-
-    }catch(error){
-        await DBUtil.rollbackTransactions(client);
-        throw new Error(getErrorMessage(error));
-    }
+    const accessToken = await TokenUtil.generateAccessToken({
+        userId: user.id,
+        client: client
+    });
     
+    const refreshToken = TokenUtil.generateRefreshToken();
+    const expires_date = new Date(Date.now() * 7 * 24 * 60 * 1000);
+
+    await DBUtil.query(
+        `INSERT INTO auth_token(user_id, token, is_active, expire_at)
+        VALUES($1, $2, $3, $4) RETURNING *`,
+    [user.id, refreshToken, true, expires_date], client);
+    
+    return {accessToken, refreshToken};    
 }
 
 export const generateTokenTable = async (tokenTable: TokenTable): Promise<string> => {
@@ -80,9 +69,9 @@ export const generateTokenTable = async (tokenTable: TokenTable): Promise<string
     const expiresAt = new Date(Date.now() + duration);
 
     const result = await DBUtil.query(`
-        INSERT into ${tokenTable.tableName} (user_id, token, is_active, is_verified, expires_at)
+        INSERT into ${tokenTable.tableName} (user_id, token, is_active, expires_at)
         VALUES($1, $2, $3, $4) RETURNING *`,
-    [tokenTable.userId, token, true, false, expiresAt], tokenTable.client);
+    [tokenTable.userId, token, true, expiresAt], tokenTable.client);
 
     return result[0].token;
 }
@@ -109,7 +98,7 @@ export const verifyEmailToken = async (token: string) =>{
     await DBUtil.query("DELETE FROM email_verification_token WHERE user_id = $1", [emailToken[0].user_id]);
     await DBUtil.commitTransaction(client);
     }catch(error){
-        await DBUtil.rollbackTransactions(client);
+        await DBUtil.rollbackTransaction(client);
 
         throw new Error(getErrorMessage(error));
     }
@@ -139,7 +128,7 @@ export const verifyForgotPasswordToken = async (token: string) =>{
         [passwordToken[0].user_id]);
     await DBUtil.commitTransaction(client);
     }catch(error){
-        await DBUtil.rollbackTransactions(client);
+        await DBUtil.rollbackTransaction(client);
 
         throw new Error(getErrorMessage(error));
     }
@@ -164,7 +153,7 @@ export const verifyEmailAndResetPassword = async (email: string) =>{
         await DBUtil.commitTransaction(client);
 
     }catch(error){
-        await DBUtil.rollbackTransactions(client);
+        await DBUtil.rollbackTransaction(client);
         throw new Error(getErrorMessage(error))
     }
 }

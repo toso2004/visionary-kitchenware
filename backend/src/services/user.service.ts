@@ -1,79 +1,100 @@
-import * as userInterface from '../models/interface/user.interface';
+import * as UserInterface from '../models/interface/user.interface';
 import * as DBUtil from '../utils/db.util';
 import { PoolClient } from 'pg';
 import { getErrorMessage } from '../utils/error.util';
-import bycrpt from 'bcrypt'
+import bcrypt from 'bcrypt'
 import { sendEmailVerification } from '../utils/email.util';
 import { RoleName, TokenTableName } from '../models/enums/auth.enum';
-import { generateTokenTable } from './auth.service';
+import { generateTokenTable, storeRefreshToken } from './auth.service';
+import { CreateUser } from '../models/types/omit.type';
 
-/**
- * Create user
- * @param param0 
- * @returns 
- */
+
+
 export const createUser = async ({
-    user,
-    assignRole 
-}:{
-    user: userInterface.CreateUserInput,
-    assignRole: RoleName
-}) =>{
-    let client: PoolClient | undefined;
-    try{
-        client = await DBUtil.startTransaction()
-        const existing_user = await DBUtil.query("SELECT id FROM user WHERE email = $1", [user.email], client);
+  user,
+  assignRole
+}: {
+  user: CreateUser,
+  assignRole: RoleName;
+}) => {
 
-        if(existing_user.length === 1){
-            throw new Error("User with that account already exists");
-        }
+  const client = await DBUtil.startTransaction();
+  
+  try{
+    const existingUser = await getUserByEmail(user.email);
+    if(existingUser){
+      throw new Error("User with that account already exists");
+    }
 
-        const hashedPassword = await bycrpt.hash(user.password, 10);
+    const role = await getRoleByName(assignRole);
 
-        //Find the role id which will later be inserted into users table in the role_id foreign key row
-        const role = await getRoleName(assignRole);
+    const result = await create_user({user, role, client});
 
-        const userQuery = 
-            `INSERT INTO "user"(role_id, name, email, password, dob, address, is_active, is_verified, created_at)
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-            RETURNING id`;
+    const { accessToken, refreshToken } = await storeRefreshToken({
+      user: result,
+      client
+    });
 
-        const params = [
-            role.id,// Role ID acquired from role
-            user.name, 
-            user.email, 
-            hashedPassword, 
-            user.dob, 
-            user.address, 
-            true, 
-            false
-        ];
+    await DBUtil.commitTransaction(client);
 
-        const createUser = await DBUtil.query(userQuery, params, client);
-        
-        //Let controllers handle this
-        const verificationToken = await generateTokenTable({
-            userId: createUser[0].userId,
-            client: client,
-            tableName: TokenTableName.EMAIL
-        })
+    return{
+      userId: result.id,
+      email: result.email,
+      accessToken,
+      refreshToken
+    }
+    
+  }catch(error){
+    await DBUtil.rollbackTransaction(client);
+    throw error;
+  }
+}
 
-        await sendEmailVerification({
-            email: user.email,
-            token: verificationToken
-        }); 
-        
-        await DBUtil.commitTransaction(client);
+export const create_user = async ({
+  user,
+  role,
+  client
+}: {
+  user: CreateUser;
+  role: UserInterface.Role;
+  client: PoolClient
+})=> {
+  // Hash password
+  const hashedPassword = await bcrypt.hash(user.password, 10);
 
-        return createUser[0];
+  // Insert new user
+  const userQuery = `
+    INSERT INTO user 
+      (role_id, name, email, password, dob, address, is_active, is_verified, last_updated_date)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+    RETURNING *;
+  `;
 
-    }catch(error){
-        if(client){
-            await DBUtil.rollbackTransactions(client);
-        }
+  const params = [
+    role.id,
+    user.name,
+    user.email,
+    hashedPassword,
+    user.dob,
+    user.address,
+    true,
+    false,
+  ];
 
-        throw new Error(getErrorMessage(error));
-    }     
+  const rows = await DBUtil.query(userQuery, params, client);
+
+  const verificationToken = await generateTokenTable({
+    userId: rows[0].id,
+    client,
+    tableName: TokenTableName.EMAIL
+  });
+
+  await sendEmailVerification({
+    email: user.email,
+    token: verificationToken
+  })
+
+  return rows[0] as UserInterface.User;
 };
 
 /**
@@ -84,13 +105,13 @@ export const createUser = async ({
 export const updateUser = async ({
     user
 }:{
-    user: userInterface.User
+    user: UserInterface.User
 }) =>{
     
-    const hashedPassword = await bycrpt.hash(user.password, 10);
+    const hashedPassword = await bcrypt.hash(user.password, 10);
 
     //If the user exists update the user
-    const SqlQuery = `UPDATE "users" 
+    const SqlQuery = `UPDATE user 
     SET
         name = $2,
         email = $3,
@@ -122,7 +143,7 @@ export const updateUser = async ({
     // insert the user instead of returning an error message indicating that the user doesn't exist
     if(updatedUser.length === 0){
         const insertQuery = `INSERT INTO 
-        "users"(id, role_id, name, email, password, dob, address, is_active, is_verified, updated_at)
+        user(id, role_id, name, email, password, dob, address, is_active, is_verified, updated_at)
         VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
         RETURNING id`;
 
@@ -141,7 +162,7 @@ export const updateUser = async ({
 export const deleteUserById = async (user_id: Number )=> {
     
     try{
-        const deleteQuery = `UPDATE "user" 
+        const deleteQuery = `UPDATE user 
         SET is_active = False 
         WHERE id = $1 AND is_active = True
         RETURNING id`;
@@ -168,17 +189,28 @@ export const deleteUserById = async (user_id: Number )=> {
  * @param roleName 
  * @returns 
  */
-export const getRoleName = async (
+export const getRoleByName = async (
     roleName: string
-): Promise<userInterface.Role> =>{
+): Promise<UserInterface.Role> =>{
     const findRole = 'SELECT * from role WHERE name ILIKE = $1';
 
     const value = `%${roleName}%`;
 
     const result = (await DBUtil.query(findRole, [value])) as unknown as [
-        userInterface.Role
+        UserInterface.Role
     ]
 
     return result[0];
 }
+
+const getUserByEmail = async (email: string)=> {
+  const sqlQuery = `SELECT * FROM user WHERE email ILIKE $1`;
+
+  const result = (
+    await DBUtil.query(sqlQuery, [email])
+  )[0] as unknown as UserInterface.User;
+
+  return result;
+};
+
 

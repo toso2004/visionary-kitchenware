@@ -17,16 +17,6 @@ export interface User extends BaseUser{
     is_verified?: boolean
 }
 
-export interface CreateUserInput{
-    name: string;
-    email: string;
-    password: string;
-    dob: string;
-    address: string;
-    is_active?: boolean;
-    is_verified?: boolean
-}
-
 export interface Role{
     id: number,
     name: RoleName

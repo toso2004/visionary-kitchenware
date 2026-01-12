@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import * as UserService from '../services/user.service';
 import * as HttpUtil from '../utils/http.util';
 import { RoleName } from '../models/enums/auth.enum';
+import { CreateUser } from '../models/types/omit.type';
 
 
 export const CreateUserController = async (req: Request, res: Response): Promise<void> => {
@@ -15,7 +16,7 @@ export const CreateUserController = async (req: Request, res: Response): Promise
             return;
         }
 
-        const user: userInterface.CreateUserInput = {
+        const user: CreateUser = {
             name,
             email,
             password,
@@ -31,14 +32,14 @@ export const CreateUserController = async (req: Request, res: Response): Promise
         HttpUtil.sendCreated(res, createUser);
 
     }catch(error: any){
-        HttpUtil.sendInternalError(res, error.message)
+        HttpUtil.sendInternalError(res, error.message);
     }
 };
 
 export const UpdateUserController = async (req: Request, res: Response): Promise<void> =>{
     try{
         const {role_id, name, email, password, dob, address, is_active, is_verified} = req.body;
-        const id = req.params.id
+        const id = req.params.id;
 
         const user: userInterface.User = {
             id: Number(id),// Convert URL parameter to a number

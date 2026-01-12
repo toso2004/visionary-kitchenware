@@ -12,11 +12,11 @@ import { logger } from './logger.util';
 dotenv.config();
 
 const pool = new Pool({
-    user: process.env.DB_USER,
     host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
-    port: Number(process.env.DB_PORT),
+    user: process.env.DB_USER
 });
 
 /**
@@ -50,7 +50,7 @@ export const query = async (text: string, params?: any[], client?: PoolClient) =
         const results = await dbClient.query(text, params);
         return results.rows;
     }catch(error: any){
-        console.error("Database query error", error);
+        console.error("Database query error:", error);
         throw error;
     }   
 };
@@ -62,7 +62,7 @@ export const query = async (text: string, params?: any[], client?: PoolClient) =
 export const startTransaction = async (): Promise<PoolClient> =>{
     const client = await pool.connect();// Create a single connection
     try{
-        client.query('BEGIN');// Start transaction
+        await client.query('BEGIN');// Start transaction
         return client;
     }catch(error){
         client.release();// End transaction error
@@ -85,7 +85,7 @@ export const commitTransaction = async (client: PoolClient): Promise<void> =>{
 /**
  * Undo all the changes made so far in the database and return it to the state before the changes
  */
-export const rollbackTransactions = async (client: PoolClient): Promise<void> =>{
+export const rollbackTransaction = async (client: PoolClient): Promise<void> =>{
     try{
         await client.query('ROLLBACK');
     }finally{
