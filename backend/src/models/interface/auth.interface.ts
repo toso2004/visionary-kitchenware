@@ -14,7 +14,7 @@ export interface AuthenticatedRequest extends Request{
     user?: JWTPayload
 }
 
-//Descibes a database table that contains authentication tokens
+//Describes a database table that contains authentication tokens
 export interface TokenTable{
     userId: number,
     client: PoolClient,

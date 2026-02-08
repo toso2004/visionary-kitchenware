@@ -2,7 +2,7 @@
  * PoolClient is used to create a single database connection acquired from Pool
  * 
  * Mostly used for transactional operations(having full control over a db transaction) 
- * where multiple queries must be excuted on the same connection 
+ * where multiple queries must be executed on the same connection 
  * to ensure atomicity and consistency
  */
 import { Pool, PoolClient } from 'pg';
@@ -16,9 +16,7 @@ const pool = new Pool({
     port: Number(process.env.DB_PORT),
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD,
-    user: process.env.DB_USER,
-
-    options: '-c search_path=public'
+    user: process.env.DB_USER
 });
 
 /**
@@ -40,7 +38,7 @@ export const getAppTimezone = () =>{
 };
 
 /**
- * Excutes a PostgreSQL query using either a transaction client or the default connection pool
+ * Executes a PostgreSQL query using either a transaction client or the default connection pool
  * @param text - SQL query to execute
  * @param params - Optional array of parameters for parameterized queries
  * @param client - Optional transaction client - if provided query will use it, if not it will use the default pool

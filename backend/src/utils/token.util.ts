@@ -16,7 +16,7 @@ export const generateAccessToken = async ({
 
     const secret = process.env.JWT_SECRET;
     if(!secret){
-        throw new Error("JWT_SECRECT is not defined");
+        throw new Error("JWT_SECRET is not defined");
     }
 
     const options: SignOptions = {
@@ -34,7 +34,7 @@ export const generateAccessToken = async ({
 export const verifyAccessToken = (token: string): jwt.JwtPayload | null =>{
     const secret = process.env.JWT_SECRET;
     if(!secret){
-        throw new Error("JWTSECRECT is invalid");
+        throw new Error("JWT_SECRET is invalid");
     }
     try{
         return jwt.verify(token, secret) as jwt.JwtPayload

@@ -56,8 +56,6 @@ export const storeRefreshToken = async ({
     const duration = 7 * 24 * 60 * 60 * 1000; // 7 days
     const expires_date = new Date(Date.now() + duration);
 
-    console.log(expires_date)
-
     await DBUtil.query(
         `INSERT INTO auth_token(user_id, token, is_active, expires_at)
         VALUES($1, $2, $3, $4) RETURNING *;`,
