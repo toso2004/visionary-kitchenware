@@ -42,3 +42,25 @@ export const authenticateToken = (
         forbidden(res, "Invalid or expired access token")
     }
 }
+
+// Check for a specific role
+export const requireRole = (requireRole: string) =>{
+    return(req: AuthenticatedRequest, res: Response, next: NextFunction)=> {
+        if(!req.user) unauthorized(res, "User not authorized");
+
+        if(req.user?.role !== requireRole){
+            forbidden(res, "User has no permission");
+        };
+        next();
+    };
+}
+
+// Grant access to multiple roles
+export const requireAnyRole = (requireAnyRole: string)=> {
+    return(req: AuthenticatedRequest, res: Response, next: NextFunction)=>{
+        if(!req.user) unauthorized(res, "User not authorized");
+        if(!requireAnyRole.includes(req.user?.role || ""))
+            forbidden(res, "User has no permission");
+        next();
+    }
+}
