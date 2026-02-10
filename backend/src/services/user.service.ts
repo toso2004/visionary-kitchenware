@@ -219,19 +219,21 @@ export const getRoleByName = async (
 }
 
 export const validateUser = async (email: string, password: string)=>{
-  const user: UserInterface.User = await getUserByEmail(email);
-
-  if(!user){
-    throw "User not found.";
-  }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-
-  if(!isPasswordValid){
-    throw "Incorrect credentials."
-  }
-
+  
   try{
+    const user: UserInterface.User = await getUserByEmail(email);
+    
+    if(!user){
+      throw "User not found.";
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if(!isPasswordValid){
+      throw "Incorrect credentials."
+    }
+
+  
     const {accessToken, refreshToken} = await storeRefreshToken({
       user: user
     });

@@ -3,7 +3,75 @@ import * as HTTPUtil from '../utils/http.util';
 import * as authService from '../services/auth.service';
 import { getErrorMessage } from '../utils/error.util';
 import * as userService from '../services/user.service';
+import { RoleName } from '../models/enums/auth.enum';
+//import { CreateUser } from '../models/types/omit.type';
+import * as userInterface from '../models/interface/user.interface';
 
+
+export const CreateUserController = async (req: Request, res: Response)=> {
+
+    /*
+    const {name, email, password, dob, address} = req.body;
+
+    if(!name || !email || !password || !dob || !address){
+        HTTPUtil.badRequest(res, 'User credentials are missing');
+        return;
+    }
+
+    const user: CreateUser = {
+        name,
+        email,
+        password,
+        dob,
+        address
+    }*/
+
+   const user: userInterface.User = req.body;
+   if(user === null){
+    HTTPUtil.badRequest(res, "User credentials are required");
+   }
+
+    try{
+        const createUser = await userService.createUser({
+            user,
+            assignRole: RoleName.CUSTOMER
+        })
+
+        HTTPUtil.sendSuccess(res, createUser);
+
+    }catch(error: any){
+        HTTPUtil.sendInternalError(res, error.message);
+    }
+};
+
+export const UpdateUserController = async (req: Request, res: Response)=>{
+    
+    const {role_id, name, email, password, dob, address, is_active, is_verified} = req.body;
+    const id = req.params.id;
+
+    const user: userInterface.User = {
+        id: Number(id),// Convert URL parameter to a number
+        role_id: role_id || 3,
+        name,
+        email,
+        password,
+        dob,
+        address,
+        is_active: is_active || true,
+        is_verified: is_verified || false,
+        created_at: '',
+        updated_at: ''
+    }
+
+    try{
+        const updateUser = await userService.updateUser({user});
+
+        HTTPUtil.sendSuccess(res, updateUser);
+
+    }catch(error){
+        HTTPUtil.sendInternalError(res, getErrorMessage(error))
+    }
+};
 
 export const verifyEmailController = async (req: Request,res: Response) =>{
     const {token} = req.body;
@@ -22,7 +90,7 @@ export const verifyEmailController = async (req: Request,res: Response) =>{
     }
 }
 
-export const reqResetPasswordToken = async (req: Request, res: Response)=>{
+export const requestResetPasswordToken = async (req: Request, res: Response)=>{
     const {email} = req.body;
 
     if(!email) return HTTPUtil.badRequest(res, "Email is required");
@@ -74,7 +142,7 @@ export const refreshAccessTokenController = async (req: Request, res: Response)=
     }
 }
 
-export const revokeAccessTokenController = async (req: Request, res: Response)=>{
+export const revokeRefreshTokenController = async (req: Request, res: Response)=>{
     const {refresh_token} = req.body;
 
     if(!refresh_token) return HTTPUtil.badRequest(res, "Refresh token is required");

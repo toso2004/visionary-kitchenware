@@ -3,64 +3,70 @@ import { Request, Response } from 'express';
 import * as UserService from '../services/user.service';
 import * as HttpUtil from '../utils/http.util';
 import { RoleName } from '../models/enums/auth.enum';
-import { CreateUser } from '../models/types/omit.type';
+//import { CreateUser } from '../models/types/omit.type';
+import { getErrorMessage } from '../utils/error.util';
 
 
-export const CreateUserController = async (req: Request, res: Response): Promise<void> => {
+export const CreateEmployeeController = async (req: Request, res: Response)=> {    
+    /*const {name, email, password, dob, address} = req.body;
+
+    if(!name || !email || !password || !dob || !address){
+        HttpUtil.badRequest(res, 'User credentials are missing');
+        return;
+    }
+
+    const user: CreateUser = {
+        name,
+        email,
+        password,
+        dob,
+        address
+    }*/
+    const user: userInterface.User = req.body;
+    if(user === null){
+    HttpUtil.badRequest(res, "User credentials are required");
+    return;
+    }
 
     try{
-        const {name, email, password, dob, address} = req.body;
-
-        if(!name || !email || !password || !dob || !address){
-            HttpUtil.badRequest(res, 'User credentials are missing');
-            return;
-        }
-
-        const user: CreateUser = {
-            name,
-            email,
-            password,
-            dob,
-            address
-        }
-
         const createUser = await UserService.createUser({
             user,
-            assignRole: RoleName.CUSTOMER
+            assignRole: RoleName.EMPLOYEE
         })
 
         HttpUtil.sendCreated(res, createUser);
 
-    }catch(error: any){
-        HttpUtil.sendInternalError(res, error.message);
+    }catch(error){
+        HttpUtil.sendInternalError(res, getErrorMessage(error));
     }
 };
 
-export const UpdateUserController = async (req: Request, res: Response): Promise<void> =>{
+export const UpdateEmployeeController = async (req: Request, res: Response)=>{
+    
+    const {role_id, name, email, password, dob, address, is_active, is_verified} = req.body;
+    const id = req.params.id;
+
+    const user: userInterface.User = {
+        id: Number(id),// Convert URL parameter to a number
+        role_id: role_id || 3,
+        name,
+        email,
+        password,
+        dob,
+        address,
+        is_active: is_active || true,
+        is_verified: is_verified || false,
+        created_at: '',
+        updated_at: ''
+    }
+
     try{
-        const {role_id, name, email, password, dob, address, is_active, is_verified} = req.body;
-        const id = req.params.id;
-
-        const user: userInterface.User = {
-            id: Number(id),// Convert URL parameter to a number
-            role_id: role_id || 3,
-            name,
-            email,
-            password,
-            dob,
-            address,
-            is_active: is_active || true,
-            is_verified: is_verified || false,
-            created_at: '',
-            updated_at: ''
-        }
-
         const updateUser = await UserService.updateUser({user});
 
         HttpUtil.sendSuccess(res, updateUser);
 
-    }catch(error: any){
-        HttpUtil.sendInternalError(res, error.message)
+    }catch(error){
+        HttpUtil.sendInternalError(res, getErrorMessage(error))
     }
 };
 
@@ -85,7 +91,7 @@ export const DeleteUserController = async (req: Request, res: Response): Promise
             message: 'User deleted successfully'
         })
 
-    }catch(error: any){
-        HttpUtil.sendInternalError(res, error.message)
+    }catch(error){
+        HttpUtil.sendInternalError(res, getErrorMessage(error))
     }
 }

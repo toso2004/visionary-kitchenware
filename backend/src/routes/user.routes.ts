@@ -3,8 +3,8 @@ import * as UserController from '../controllers/user.controller';
 
 export const userRouter = Router();
 
-userRouter.post('/create', UserController.CreateUserController);
-userRouter.put('/edit', UserController.UpdateUserController);
-userRouter.delete('/delete', UserController.DeleteUserController);
+userRouter.post('/', UserController.CreateEmployeeController);
+userRouter.put('/edit-employee/:id', UserController.UpdateEmployeeController);
+userRouter.delete('/delete/:id', UserController.DeleteUserController);
 
 
