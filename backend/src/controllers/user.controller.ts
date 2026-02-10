@@ -12,7 +12,7 @@ export const CreateUserController = async (req: Request, res: Response): Promise
         const {name, email, password, dob, address} = req.body;
 
         if(!name || !email || !password || !dob || !address){
-            HttpUtil.badRequest(res, 'User credientials are missing');
+            HttpUtil.badRequest(res, 'User credentials are missing');
             return;
         }
 

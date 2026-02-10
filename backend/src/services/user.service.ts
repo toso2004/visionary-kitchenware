@@ -1,6 +1,6 @@
 import * as UserInterface from '../models/interface/user.interface';
 import * as DBUtil from '../utils/db.util';
-import { PoolClient } from 'pg';
+import { Client, PoolClient } from 'pg';
 import { getErrorMessage } from '../utils/error.util';
 import bcrypt from 'bcrypt'
 import { sendEmailVerification } from '../utils/email.util';
@@ -182,6 +182,23 @@ export const deleteUserById = async (user_id: Number )=> {
     }  
 }
 
+export const getUserById = async (userId: number) => {
+  try {
+    const result = await DBUtil.query(
+      'SELECT * FROM "user" WHERE id = $1',
+      [userId]
+    );
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    return result[0];
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+};
+
 /**
  * Gets the name of the role as a string to be applied when assigning a new/promoted user a role
  * @param roleName 
@@ -199,6 +216,34 @@ export const getRoleByName = async (
     ]
 
     return result[0];
+}
+
+export const validateUser = async (email: string, password: string)=>{
+  const user: UserInterface.User = await getUserByEmail(email);
+
+  if(!user){
+    throw "User not found.";
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+
+  if(!isPasswordValid){
+    throw "Incorrect credentials."
+  }
+
+  try{
+    const {accessToken, refreshToken} = await storeRefreshToken({
+      user: user
+    });
+
+    return{
+      accessToken: accessToken,
+      refreshToken: refreshToken
+    }
+  }catch(error){
+    throw new Error(getErrorMessage(error));
+  }
+  
 }
 
 const getUserByEmail = async (email: string)=> {

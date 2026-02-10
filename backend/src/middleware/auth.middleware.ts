@@ -56,7 +56,7 @@ export const requireRole = (requireRole: string) =>{
 }
 
 // Grant access to multiple roles
-export const requireAnyRole = (requireAnyRole: string)=> {
+export const requireAnyRole = (requireAnyRole: string[])=> {
     return(req: AuthenticatedRequest, res: Response, next: NextFunction)=>{
         if(!req.user) unauthorized(res, "User not authorized");
         if(!requireAnyRole.includes(req.user?.role || ""))

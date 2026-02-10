@@ -22,7 +22,7 @@ export const refreshAccessToken = async (refreshToken: string) =>{
     return newAccessToken;      
 }
 
-export const revokeToken = async (refreshToken: string) => {
+export const revokeRefreshToken = async (refreshToken: string) => {
     const checkToken = await DBUtil.query("SELECT * from auth_token WHERE token = $1 AND is_active = TRUE AND expires_at > NOW()",
         [refreshToken]
     );
@@ -32,8 +32,8 @@ export const revokeToken = async (refreshToken: string) => {
         throw new Error("Invalid or expired token");
     }
 
-    await DBUtil.query(`
-        UPDATE auth_token
+    await DBUtil.query(
+        `UPDATE auth_token
             SET is_active = false
         WHERE token = $1`,
     [refreshToken])
@@ -41,29 +41,37 @@ export const revokeToken = async (refreshToken: string) => {
 }
 
 export const storeRefreshToken = async ({
-    user,
-    client
-}:{
-    user: userInterface.User,
-    client: PoolClient
+  user,
+  client,
+}: {
+  user: userInterface.User;
+  client?: PoolClient;
 }) => {
+  const clientInner = client ?? (await DBUtil.startTransaction());
+
+  try {
+    // Generate tokens
     const accessToken = await TokenUtil.generateAccessToken({
-        userId: user.id,
-        client: client
+      userId: user.id!,
+      client: clientInner,
     });
-    
     const refreshToken = TokenUtil.generateRefreshToken();
-    const duration = 7 * 24 * 60 * 60 * 1000; // 7 days
-    const expires_date = new Date(Date.now() + duration);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days to expire
 
+    // Store refresh token in DB
     await DBUtil.query(
-        `INSERT INTO auth_token(user_id, token, is_active, expires_at)
-        VALUES($1, $2, $3, $4) RETURNING *;`,
-    [user.id, refreshToken, true, expires_date], client);
+      `INSERT INTO auth_token (user_id, token, is_active,expire_date) VALUES ($1, $2, $3, $4)`,
+      [user.id, refreshToken, true, expiresAt],
+      clientInner
+    );
 
-    
-    return {accessToken, refreshToken};    
-} 
+    await DBUtil.commitTransaction(clientInner);
+    return { accessToken, refreshToken };
+  } catch (error) {
+    await DBUtil.rollbackTransaction(clientInner);
+    throw new Error(getErrorMessage(error));
+  }
+}
 
 export const generateTokenTable = async (
   tokenTable: TokenTable
@@ -81,7 +89,6 @@ export const generateTokenTable = async (
   return result[0].token;
 };
 
-generateTokenTable
 export const verifyEmailToken = async (token: string) =>{
     const client = await DBUtil.startTransaction();
     try{

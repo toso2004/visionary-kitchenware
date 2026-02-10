@@ -1,10 +1,10 @@
-import {  Router} from 'express';
+import { Router} from 'express';
 import * as UserController from '../controllers/user.controller';
 
-export const router = Router();
+export const userRouter = Router();
 
-router.post('/create', UserController.CreateUserController);
-router.put('/edit', UserController.UpdateUserController);
-router.delete('/delete', UserController.DeleteUserController);
+userRouter.post('/create', UserController.CreateUserController);
+userRouter.put('/edit', UserController.UpdateUserController);
+userRouter.delete('/delete', UserController.DeleteUserController);
 
 
