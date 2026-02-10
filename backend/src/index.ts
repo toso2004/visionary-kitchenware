@@ -7,9 +7,9 @@ import * as AuthMiddleware from './middleware/auth.middleware';
 import { RoleName } from './models/enums/auth.enum';
 import { authRouter } from './routes/auth.routes';
 import { userRouter } from './routes/user.routes';
-import { membershipTypeRouter } from './routes/membership-type.routes';
+//import { membershipTypeRouter } from './routes/membership-type.routes';
 import { testRoute } from "./routes/test.routes";
-import { membershipRouter } from './routes/membership.routes'
+//import { membershipRouter } from './routes/membership.routes'
 
 
 const setUpMiddleware = (app: express.Express) =>{
@@ -40,7 +40,7 @@ const setUpRoutes = (app: express.Express) =>{
     userRouter
   );
     
-  apiRouter.use(
+  /*apiRouter.use(
     "/membership-type",
     AuthMiddleware.authenticateToken,
     AuthMiddleware.requireAnyRole([RoleName.SYSTEMADMIN, RoleName.ADMIN]),
@@ -51,7 +51,7 @@ const setUpRoutes = (app: express.Express) =>{
     "/membership",
     AuthMiddleware.authenticateToken,
     membershipRouter
-  );
+  );*/
 
   app.use(
     "/api",
